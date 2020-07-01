@@ -1,11 +1,14 @@
 package com.swagath.mylauncher
 
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Window
 import android.view.WindowManager
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
@@ -82,4 +85,14 @@ class MainActivity : AppCompatActivity() {
             mHandler.removeCallbacks(mRunnable)
         }
     }
+
+    private fun setIcon(pkg_name: String, image_view: ImageView) {
+        try {
+            val icon: Drawable? = packageManager.getApplicationIcon(pkg_name)
+            image_view.setImageDrawable(icon)
+        } catch (e: PackageManager.NameNotFoundException) {
+            e.printStackTrace()
+        }
+    }
+
 }
