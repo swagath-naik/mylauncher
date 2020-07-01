@@ -75,4 +75,11 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        isContainue = false
+        if (this::mHandler.isInitialized) {
+            mHandler.removeCallbacks(mRunnable)
+        }
+    }
 }
