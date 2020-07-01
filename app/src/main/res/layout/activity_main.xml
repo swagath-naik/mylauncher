@@ -36,7 +36,7 @@
         android:id="@+id/main_dock"
         android:layout_width="0dp"
         android:layout_height="76dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="42dp"
         android:gravity="center"
         android:padding="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
