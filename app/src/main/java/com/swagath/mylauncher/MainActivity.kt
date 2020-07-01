@@ -76,6 +76,66 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+
+        dock_icon_01.setOnClickListener {
+            val launchIntent =
+                packageManager.getLaunchIntentForPackage("com.google.android.dialer")
+            if (launchIntent != null) {
+                startActivity(launchIntent)
+            } else {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Please install Dialer App",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+        dock_icon_02.setOnClickListener {
+            val launchIntent =
+                packageManager.getLaunchIntentForPackage("com.google.android.apps.messaging")
+            if (launchIntent != null) {
+                startActivity(launchIntent)
+            } else {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Please install Messages App",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
+        dock_icon_04.setOnClickListener {
+            val launchIntent =
+                packageManager.getLaunchIntentForPackage("com.android.chrome")
+            if (launchIntent != null) {
+                startActivity(launchIntent)
+            } else {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Please install Google Chrome App",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+        dock_icon_05.setOnClickListener {
+            val launchIntent =
+                packageManager.getLaunchIntentForPackage("com.google.android.GoogleCamera")
+            if (launchIntent != null) {
+                startActivity(launchIntent)
+            } else {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Please install Google Camera App",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
+        setIcon("com.google.android.dialer", dock_icon_01)
+        setIcon("com.google.android.apps.messaging", dock_icon_02)
+        setIcon("com.android.chrome", dock_icon_04)
+        setIcon("com.google.android.GoogleCamera", dock_icon_05)
+
     }
 
     override fun onDestroy() {
