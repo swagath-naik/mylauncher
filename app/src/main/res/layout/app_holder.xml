@@ -7,8 +7,8 @@
 
     <ImageView
         android:id="@+id/app_icon"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:contentDescription="@string/app_holder_icon"
         android:padding="4dp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -22,7 +22,9 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
         android:contentDescription="@string/app_holder_app_name"
+        android:shadowColor="#100F0F"
         android:text="@string/app_holder_app_name"
+        android:textColor="#FFFFFF"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/app_icon"
         app:layout_constraintTop_toTopOf="parent" />
