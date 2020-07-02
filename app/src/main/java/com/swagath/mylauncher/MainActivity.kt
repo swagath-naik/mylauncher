@@ -6,6 +6,9 @@ import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.Window
 import android.view.WindowManager
 import android.widget.ImageView
@@ -15,7 +18,9 @@ import kotlinx.android.synthetic.main.activity_main.*
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), GestureDetector.OnGestureListener {
+    val tag = "MainActivity"
+    var gestureDetector: GestureDetector? = null
     var isContainue = true
     lateinit var mHandler: Handler
     private lateinit var mRunnable: Runnable
@@ -51,6 +56,8 @@ class MainActivity : AppCompatActivity() {
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
         )
+
+        gestureDetector = GestureDetector(this@MainActivity, this@MainActivity)
 
         val sdf = SimpleDateFormat("EEEE, dd MMM ", Locale.getDefault())
         val currentDateandTime: String = sdf.format(Date())
@@ -154,5 +161,79 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
     }
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        return gestureDetector!!.onTouchEvent(event)
+    }
+
+    override fun onShowPress(e: MotionEvent?) {
+
+    }
+
+    override fun onSingleTapUp(e: MotionEvent?): Boolean {
+        return true
+
+    }
+
+    override fun onDown(e: MotionEvent?): Boolean {
+        return true
+    }
+
+    override fun onFling(
+        e1: MotionEvent?,
+        e2: MotionEvent?,
+        velocityX: Float,
+        velocityY: Float
+    ): Boolean {
+        val defVal = 150
+        Log.d("fling", "->> fling")
+        if (e1!!.getY() - e2!!.getY() > defVal) {
+            Log.d("fling", "->> Swipe Up")
+
+            val intent = Intent(this, ShowAllAppsActivity::class.java)
+            Log.d(tag, "Launch LauncherActivity Class")
+            startActivity(intent)
+
+
+            return true
+        }
+
+        if (e2.getY() - e1.getY() > defVal) {
+
+            Log.d("fling", "->> Swipe Down")
+            return true
+        }
+
+        if (e1.getX() - e2.getX() > defVal) {
+
+            Log.d("fling", "->> Swipe Left ")
+
+            return true
+        }
+
+        if (e2.getX() - e1.getX() > defVal) {
+
+            Log.d("fling", "->> Swipe Right ")
+
+            return true
+        } else {
+
+            return true
+        }
+    }
+
+    override fun onScroll(
+        e1: MotionEvent?,
+        e2: MotionEvent?,
+        distanceX: Float,
+        distanceY: Float
+    ): Boolean {
+        return true
+    }
+
+    override fun onLongPress(e: MotionEvent?) {
+
+    }
+
 
 }
