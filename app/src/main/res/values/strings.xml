@@ -3,5 +3,7 @@
     <string name="widget_loading">Loading &#8230;</string>
     <string name="dock_icon_name">dock icon</string>
     <string name="swipe_up_button">swipe up button</string>
+    <string name="app_holder_icon">app holder icon</string>
+    <string name="app_holder_app_name"> app name loading</string>
 
 </resources>
