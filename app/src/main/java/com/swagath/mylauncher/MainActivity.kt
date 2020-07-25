@@ -110,6 +110,10 @@ class MainActivity : AppCompatActivity(), GestureDetector.OnGestureListener {
                 ).show()
             }
         }
+        dock_icon_03.setOnClickListener {
+            val intent = Intent(this, VoiceListenerActivity::class.java)
+            startActivity(intent)
+        }
 
         dock_icon_04.setOnClickListener {
             val launchIntent =
