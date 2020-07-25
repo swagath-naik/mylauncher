@@ -62,7 +62,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:contentDescription="@string/dock_icon_name"
-            app:srcCompat="@android:drawable/sym_def_app_icon" />
+            app:srcCompat="@mipmap/ic_voice_mic_round" />
 
         <ImageView
             android:id="@+id/dock_icon_04"
