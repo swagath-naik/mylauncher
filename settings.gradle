@@ -1,2 +1,2 @@
-include ':aars', ':app'
+include ':models', ':aars', ':app'
 rootProject.name = "My Launcher"
