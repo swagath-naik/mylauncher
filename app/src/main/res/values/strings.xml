@@ -5,6 +5,17 @@
     <string name="swipe_up_button">swipe up button</string>
     <string name="app_holder_icon">app holder icon</string>
     <string name="app_holder_app_name"> app name loading</string>
-    <string name="voice_listening"> Listening &#8230;</string>
+    <string name="voice_listening"> Voice Assistant</string>
+    <string name="voice_commands"> Examples: Say <b>my launcher</b> followed by \n
+        <i>start media player\n
+            start &lt;App name&gt;\n
+            search &lt;web search  query&gt;\n
+            turn &lt;on/off&gt; Wi-Fi\n
+            load playlist &lt;playlist name&gt;\n
+            turn &lt;on/off/up/down&gt; volume\n
+            turn &lt;on/off&gt; bluetooth\n
+        </i>
+
+    </string>
 
 </resources>
