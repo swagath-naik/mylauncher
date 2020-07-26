@@ -12,7 +12,7 @@
             search &lt;web search  query&gt;\n
             turn &lt;on/off&gt; Wi-Fi\n
             load playlist &lt;playlist name&gt;\n
-            turn &lt;on/off/up/down&gt; volume\n
+            turn &lt;on/off&gt;/&lt;increase/decrease&gt; volume\n
             turn &lt;on/off&gt; bluetooth\n
         </i>
 
