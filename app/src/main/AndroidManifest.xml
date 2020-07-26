@@ -20,13 +20,7 @@
             android:theme="@style/AppTheme.Wallpaper.Shadow" />
         <activity
             android:name=".ShowAllAppsActivity"
-            android:theme="@style/AppTheme.Wallpaper.Shadow">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:theme="@style/AppTheme.Wallpaper.Shadow" />
         <activity
             android:name=".MainActivity"
             android:theme="@style/AppTheme.Wallpaper">
