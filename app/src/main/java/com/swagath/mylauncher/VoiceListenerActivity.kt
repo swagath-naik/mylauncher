@@ -10,227 +10,196 @@ import android.content.pm.ResolveInfo
 import android.media.AudioManager
 import android.net.Uri
 import android.net.wifi.WifiManager
+import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.provider.MediaStore
 import android.provider.Settings
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.util.Log
-import android.widget.Toast
-import androidx.annotation.RequiresApi
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.willowtreeapps.fuzzywuzzy.diffutils.FuzzySearch
 import kotlinx.android.synthetic.main.activity_voice_listener.*
+import org.json.JSONException
+import org.json.JSONObject
+import org.kaldi.*
+import java.io.IOException
+import java.lang.ref.WeakReference
 import java.net.URLEncoder
 import java.util.*
 import kotlin.concurrent.schedule
 
+
 class VoiceListenerActivity : AppCompatActivity(), TextToSpeech.OnInitListener,
     RecognitionListener {
-    private val maxLinesInput = 10
 
-    private var speech: SpeechRecognizer? = null
-    private var recognizerIntent: Intent? = null
-    private val LOG_TAG = "VoiceRecognition"
-    private var mTTS: TextToSpeech? = null
-    var isChecked = true
-    var listening = false
-    private lateinit var mHandler: Handler
-    private lateinit var mRunnable: Runnable
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_voice_listener)
+    companion object {
+        private const val STATE_START = 0
+        private const val STATE_READY = 1
+        private const val STATE_DONE = 2
+        private const val STATE_FILE = 3
+        private const val STATE_MIC = 4
 
-        mTTS = TextToSpeech(this, this)
+        private const val PERMISSIONS_REQUEST_RECORD_AUDIO = 1
 
-        tgglLst()
-    }
-
-    private fun tgglLst() {
-
-        if (isChecked) {
-            listening = true
-            start()
-            ActivityCompat.requestPermissions(
-                this@VoiceListenerActivity, arrayOf(Manifest.permission.RECORD_AUDIO),
-                REQUEST_RECORD_PERMISSION
-            )
-        } else {
-            listening = false
-            turnOf()
+        init {
+            System.loadLibrary("kaldi_jni")
         }
     }
 
-    fun start() {
-        speech = SpeechRecognizer.createSpeechRecognizer(this)
-        Log.i(LOG_TAG, "isRecognitionAvailable: " + SpeechRecognizer.isRecognitionAvailable(this))
-        speech!!.setRecognitionListener(this)
-        recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-        recognizerIntent!!.putExtra(
-            RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE,
-            "en"
-        )
-        recognizerIntent!!.putExtra(
-            RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
-        )
-        recognizerIntent!!.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, maxLinesInput)
+    private var mTTS: TextToSpeech? = null
+    private var model: Model? = null
+    private var recognizer: SpeechRecognizer? = null
+    var resultView: TextView? = null
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_voice_listener)
+        mTTS = TextToSpeech(this, this, "edu.cmu.cs.speech.tts.flite")
+        resultView = findViewById(R.id.resultVoiceView)
+        setUiState(STATE_START)
+
+        // Check permission
+        val permissionCheck =
+            ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.RECORD_AUDIO)
+        if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                PERMISSIONS_REQUEST_RECORD_AUDIO
+            )
+            return
+        }
+
+        SetupTask(this).execute() // Async Recognizer initialization
     }
 
-    fun turnOf() {
-        speech!!.stopListening()
-        speech!!.destroy()
+    private class SetupTask internal constructor(activity: VoiceListenerActivity) :
+        AsyncTask<Void?, Void?, Exception?>() {
+        var activityReference: WeakReference<VoiceListenerActivity> = WeakReference(activity)
+        override fun doInBackground(vararg params: Void?): Exception? {
+            try {
+                val assets = Assets(activityReference.get())
+                val assetDir = assets.syncAssets()
+                Log.d("Kaldi", "Sync files in the folder $assetDir")
+                Vosk.SetLogLevel(0)
+                activityReference.get()!!.model = Model("$assetDir/model-android")
+            } catch (e: IOException) {
+                return e
+            }
+            return null
+        }
+
+        override fun onPostExecute(result: Exception?) {
+            if (result != null) {
+                activityReference.get()!!.setErrorState(
+                    String.format(
+                        activityReference.get()!!.getString(R.string.failed), result
+                    )
+                )
+            } else {
+                activityReference.get()!!.setUiState(STATE_READY)
+            }
+        }
+
     }
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
+        permissions: Array<String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            REQUEST_RECORD_PERMISSION -> if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this@VoiceListenerActivity, "Start speaking...", Toast.LENGTH_SHORT)
-                    .show()
-                speech!!.startListening(recognizerIntent)
+        if (requestCode == PERMISSIONS_REQUEST_RECORD_AUDIO) {
+            if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                SetupTask(this).execute()
             } else {
-                Toast.makeText(this@VoiceListenerActivity, "Permission Denied!", Toast.LENGTH_SHORT)
-                    .show()
+                finish()
             }
         }
-    }
-
-    public override fun onResume() {
-        super.onResume()
-    }
-
-    override fun onPause() {
-        super.onPause()
-
     }
 
     override fun onStop() {
-        Log.d("pkg", "OnStop method")
-        finish()
         super.onStop()
-
+        finish()
     }
 
-    override fun onReadyForSpeech(bundle: Bundle) {
-        Log.i(LOG_TAG, "onReadyForSpeech")
-    }
-
-    override fun onBeginningOfSpeech() {
-        Log.i(LOG_TAG, "onBeginningOfSpeech")
-    }
-
-    override fun onRmsChanged(rmsdB: Float) {
-        Log.i(LOG_TAG, "onRmsChanged: $rmsdB")
-        if (!listening) {
-            turnOf()
+    public override fun onDestroy() {
+        super.onDestroy()
+        if (recognizer != null) {
+            recognizer!!.cancel()
+            recognizer!!.shutdown()
+        }
+        if (mTTS != null) {
+            mTTS!!.shutdown()
         }
     }
 
-    override fun onBufferReceived(bytes: ByteArray) {
-        Log.i(LOG_TAG, "onBufferReceived: $bytes")
-    }
-
-    override fun onEndOfSpeech() {
-        Log.i(LOG_TAG, "onEndOfSpeech")
-    }
-
-    override fun onError(errorCode: Int) {
-        val errorMessage = getErrorText(errorCode)
-        Log.d(LOG_TAG, "FAILED $errorMessage")
-
-        speech!!.startListening(recognizerIntent)
-        if (errorCode == SpeechRecognizer.ERROR_SPEECH_TIMEOUT || errorCode == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
-            isChecked = false
-            tgglLst()
-            isChecked = true
-            tgglLst()
+    override fun onResult(hypothesis: String) {
+        try {
+            val reader = JSONObject(hypothesis)
+            val valTxt = reader.getString("text")
+            resultView!!.text = valTxt
+            myLauncherActions(valTxt)
+        } catch (ignored: JSONException) {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-    override fun onResults(results: Bundle) {
-        Log.i(LOG_TAG, "onResults")
-        val matches = results
-            .getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-        var text = ""
-        if (matches != null) {
-            for (result in matches) text += """
-         $result
-    
-         """.trimIndent()
-        }
-        Log.i(LOG_TAG, "onResults=$text")
-        mHandler = Handler(Looper.getMainLooper())
-        mRunnable = Runnable {
-            Log.i(LOG_TAG, "Runnbale Run")
-            speech!!.startListening(recognizerIntent)
-        }
-
-        // Schedule the task to repeat after 1 second
-        mHandler.postDelayed(
-            mRunnable, // Runnable
-            7000 // Delay in milliseconds
-        )
-
-        myLauncherActions(matches!![0].toString())
+    override fun onPartialResult(hypothesis: String) {
     }
 
-    override fun onPartialResults(results: Bundle) {
-        Log.i(LOG_TAG, "onPartialResults")
-        val matches = results
-            .getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-        var text = ""
-        if (matches != null) {
-            for (result in matches) text += """
-         $result
-    
-         """.trimIndent()
-        }
-        Log.i(LOG_TAG, "onPartialResults=$text")
+    override fun onError(e: Exception) {
+        setErrorState(e.message)
     }
 
-    override fun onEvent(i: Int, bundle: Bundle) {
-        Log.i(LOG_TAG, "onEvent")
+    override fun onTimeout() {
+        recognizer!!.cancel()
+        recognizer = null
+        setUiState(STATE_READY)
     }
 
-    private fun getErrorText(errorCode: Int): String {
-        val message: String
-        when (errorCode) {
-            SpeechRecognizer.ERROR_AUDIO -> message = "Audio recording error"
-            SpeechRecognizer.ERROR_CLIENT -> message = "Client side error"
-            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> message = "Insufficient permissions"
-            SpeechRecognizer.ERROR_NETWORK -> message = "Network error"
-            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> message = "Network timeout"
-            SpeechRecognizer.ERROR_NO_MATCH -> message = "No match"
-            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> {
-                message = "RecognitionService busy"
-                turnOf()
+    private fun setUiState(state: Int) {
+        when (state) {
+            STATE_START -> resultView!!.setText(R.string.preparing)
+            STATE_READY -> {
+                resultView!!.setText(R.string.ready)
+                recognizeMicrophone()
             }
-            SpeechRecognizer.ERROR_SERVER -> message = "error from server"
-            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> message = "No speech input"
-            else -> message = "Didn't understand, please try again."
+            STATE_DONE -> {
+            }
+            STATE_FILE -> resultView!!.text = getString(R.string.starting)
+            STATE_MIC -> {
+                resultView!!.text = getString(R.string.say_something)
+            }
         }
-        return message
     }
 
-    companion object {
-        private const val REQUEST_RECORD_PERMISSION = 100
+    private fun setErrorState(message: String?) {
+        resultView!!.text = message
+    }
+
+    fun recognizeMicrophone() {
+        if (recognizer != null) {
+            setUiState(STATE_DONE)
+            recognizer!!.cancel()
+            recognizer = null
+        } else {
+            setUiState(STATE_MIC)
+            try {
+                recognizer = SpeechRecognizer(model)
+                recognizer!!.addListener(this)
+                recognizer!!.startListening()
+            } catch (e: IOException) {
+                setErrorState(e.message)
+            }
+        }
     }
 
     override fun onInit(p0: Int) {
         if (p0 == TextToSpeech.SUCCESS) {
-            val result = mTTS!!.setLanguage(Locale.ENGLISH)
+//            val result = mTTS!!.setLanguage(Locale.ENGLISH)
+            val result = mTTS!!.setLanguage(Locale.UK)
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 Log.d("TTS", "Language not supported")
             } else {
@@ -239,20 +208,6 @@ class VoiceListenerActivity : AppCompatActivity(), TextToSpeech.OnInitListener,
         } else {
             Log.d("TTS", "TextToSpeech Init failed")
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        if (speech != null) {
-            speech!!.stopListening()
-            speech!!.cancel()
-            speech!!.destroy()
-        }
-        if (mTTS != null) {
-            mTTS!!.shutdown()
-        }
-
-
     }
 
     fun myLauncherActions(fullCommand: String) {
@@ -325,7 +280,7 @@ class VoiceListenerActivity : AppCompatActivity(), TextToSpeech.OnInitListener,
                     startActivity(intent)
                 }
 
-            } else if (command == "turn off Wi-Fi") {
+            } else if (command == "turn off wifi") {
                 if (Build.VERSION.SDK_INT < 29) {
                     mTTS!!.speak("Turning off Wi-fi", TextToSpeech.QUEUE_FLUSH, null, null)
                     val wifi =
@@ -335,7 +290,7 @@ class VoiceListenerActivity : AppCompatActivity(), TextToSpeech.OnInitListener,
                     val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
                     startActivity(intent)
                 }
-            } else if (command == "turn on Wi-fi") {
+            } else if (command == "turn on wifi") {
                 if (Build.VERSION.SDK_INT < 29) {
                     mTTS!!.speak("Turning on Wi-fi", TextToSpeech.QUEUE_FLUSH, null, null)
                     val wifi =
@@ -346,7 +301,8 @@ class VoiceListenerActivity : AppCompatActivity(), TextToSpeech.OnInitListener,
                     startActivity(intent)
                 }
             } else if (stRegex2.containsMatchIn(command)) {
-                resultVoiceView.text = fullCommand.replace("Lord", "load")
+                resultVoiceView.text =
+                    fullCommand.replace("Lord".toRegex(RegexOption.IGNORE_CASE), "load")
                 val command1 =
                     command.replace("lo[ar]d playlist ".toRegex(RegexOption.IGNORE_CASE), "")
 
@@ -445,23 +401,23 @@ class VoiceListenerActivity : AppCompatActivity(), TextToSpeech.OnInitListener,
                     audioManager.setStreamMute(AudioManager.STREAM_SYSTEM, false)
                 }
                 mTTS!!.speak("Turned on Volume", TextToSpeech.QUEUE_FLUSH, null, null)
-            } else if (command == "increase volume") {
+            } else if (command == "increase the volume") {
 
                 val audioManager =
                     applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 audioManager.adjustVolume(AudioManager.ADJUST_RAISE, AudioManager.FLAG_PLAY_SOUND)
 
 
-            } else if (command == "decrease volume") {
+            } else if (command == "decrease the volume") {
 
                 val audioManager =
                     applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 audioManager.adjustVolume(AudioManager.ADJUST_LOWER, AudioManager.FLAG_PLAY_SOUND)
-            } else if (command == "turn on Bluetooth") {
+            } else if (command == "turn on bluetooth") {
                 val adapter: BluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
                 mTTS!!.speak("Blutooth On", TextToSpeech.QUEUE_FLUSH, null, null)
                 adapter.enable()
-            } else if (command == "turn off Bluetooth") {
+            } else if (command == "turn off bluetooth") {
                 val adapter: BluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
                 mTTS!!.speak("Blutooth Off", TextToSpeech.QUEUE_FLUSH, null, null)
                 adapter.disable()
