@@ -198,7 +198,6 @@ class VoiceListenerActivity : AppCompatActivity(), TextToSpeech.OnInitListener,
 
     override fun onInit(p0: Int) {
         if (p0 == TextToSpeech.SUCCESS) {
-//            val result = mTTS!!.setLanguage(Locale.ENGLISH)
             val result = mTTS!!.setLanguage(Locale.UK)
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 Log.d("TTS", "Language not supported")
@@ -288,7 +287,10 @@ class VoiceListenerActivity : AppCompatActivity(), TextToSpeech.OnInitListener,
                     wifi.isWifiEnabled = false
                 } else {
                     val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
-                    startActivity(intent)
+                    Timer().schedule(3000) {
+                        startActivity(intent)
+                    }
+
                 }
             } else if (command == "turn on wifi") {
                 if (Build.VERSION.SDK_INT < 29) {
@@ -298,7 +300,9 @@ class VoiceListenerActivity : AppCompatActivity(), TextToSpeech.OnInitListener,
                     wifi.isWifiEnabled = true
                 } else {
                     val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
-                    startActivity(intent)
+                    Timer().schedule(3000) {
+                        startActivity(intent)
+                    }
                 }
             } else if (stRegex2.containsMatchIn(command)) {
                 resultVoiceView.text =
